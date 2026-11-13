@@ -25,7 +25,7 @@ module diatom_module
   ! Type to describe different terms from the hamiltonian, e.g. potential energy, spin-orbit, <L^2>, <Lx>, <Ly> functions.
   !
   integer(ik),parameter   :: verbose=5
-  integer(ik),parameter   :: Nobjects = 35  ! number of different terms of the Hamiltonian
+  integer(ik),parameter   :: Nobjects = 51  ! number of different terms of the Hamiltonian
   !                                          (poten,spinorbit,L2,LxLy,spinspin,spinspino,bobrot,spinrot,diabatic,
   !                                             lambda-opq,lambda-p2q)
   !
@@ -58,15 +58,27 @@ module diatom_module
   !        case (13) nac(iterm)
   !        case (14) bobvib(iterm)
   !        case (15 - 20) reserved
-  !        case (21) hfcc1(1) for Fermi contact, bF
-  !        case (22) hfcc1(2) for nuclear spin - orbit, a
-  !        case (23) hfcc1(3) for nuclear dipole - spin dipole, c
-  !        case (24) hfcc1(4) for nuclear dipole - spind dipole, d
-  !        case (25) hfcc1(5) for nuclear spin - rotaton, cI
-  !        case (26) hfcc1(6) for electric dipole, eQq0
-  !        case (27) hfcc1(7) for electric diople, eQq2
-  !        case (28) hfcc1(8) for nuclear - nuclear spin dipole, ii
-  !        case (29) reserved
+  !        case (21) hfcc1(1) for nucleus-1 Fermi contact, bF
+  !        case (22) hfcc1(2) for nucleus-1 nuclear spin - orbit, a
+  !        case (23) hfcc1(3) for nucleus-1 nuclear dipole - spin dipole, c
+  !        case (24) hfcc1(4) for nucleus-1 nuclear dipole - spin dipole, d
+  !        case (25) hfcc1(5) for nucleus-1 nuclear spin - rotation, cI
+  !        case (26) hfcc1(6) for nucleus-1 nuclear spin - rotation, cIp
+  !        case (27) hfcc1(7) for nucleus-1 electric quadrupole, eQq0
+  !        case (28) hfcc1(8) for nucleus-1 electric quadrupole, eQq2
+  !        case (29 - 30) reserved
+  !        case (31) hfcc2(1) for nucleus-2 Fermi contact, bF
+  !        case (32) hfcc2(2) for nucleus-2 nuclear spin - orbit, a
+  !        case (33) hfcc2(3) for nucleus-2 nuclear dipole - spin dipole, c
+  !        case (34) hfcc2(4) for nucleus-2 nuclear dipole - spin dipole, d
+  !        case (35) hfcc2(5) for nucleus-2 nuclear spin - rotation, cI
+  !        case (36) hfcc2(6) for nucleus-2 nuclear spin - rotation, cIp
+  !        case (37) hfcc2(7) for nucleus-2 electric quadrupole, eQq0
+  !        case (38) hfcc2(8) for nucleus-2 electric quadrupole, eQq2
+  !        case (39 - 40) reserved
+  !        case (41) hfcc12(1) for dipolar nuclear spin - spin, ii
+  !        case (42) hfcc12(2) for scalar nuclear spin - spin, iis
+  !        case (43 - 45) reserved
   !        case(Nobjects-5) magnetrot(iterm)
   !        case(Nobjects-4) magnetictm(iterm)
   !        case(Nobjects-3) quadrupoletm(iterm)
@@ -87,8 +99,9 @@ module diatom_module
     "LAMBDAOPQ", "LAMBDAP2Q","LAMBDAQ", &
     "NAC", &
     "BOBVIB", "", "", "", "", "", "", & ! reserved
-    "HFCC-BF-1", "HFCC-A-1", "HFCC-C-1", "HFCC-D-1", "HFCC-CI-1", "HFCC-EQQ0-1", "HFCC-EQQ2-1", "HFCC-II-12", &
-    "", & ! reserved
+    "HFCC-BF-1", "HFCC-A-1", "HFCC-C-1", "HFCC-D-1", "HFCC-CI-1", "HFCC-CIP-1", "HFCC-EQQ0-1", "HFCC-EQQ2-1", "", "", & ! reserved
+    "HFCC-BF-2", "HFCC-A-2", "HFCC-C-2", "HFCC-D-2", "HFCC-CI-2", "HFCC-CIP-2", "HFCC-EQQ0-2", "HFCC-EQQ2-2", "", "", & ! reserved
+    "HFCC-II-12", "HFCC-IIS", "", "", "", & ! reserved
     "MAGNETROT",&
     "MAGNETIC",&
     "QUADRUPOLE", &
@@ -172,7 +185,7 @@ module diatom_module
     character(len=cl)    :: name='(unnamed)' ! Identifying name of the function (default to avoid garbled outputs)
     character(len=cl)    :: type='NONE'  ! Identifying type of the function
     character(len=cl)    :: class='NONE' ! Identifying class of the function (poten, spinorbit,dipole,abinitio etc)
-    character(len=cl),pointer  :: sub_type(:)  ! Identifying type of sub-functions (used for coupled representations)
+    character(len=cl),pointer  :: sub_type(:) => null()  ! Identifying type of sub-functions (used for coupled representations)
     !
     ! variable used for GRID curves to specify interpolation and extrapolation  options
     !
@@ -320,9 +333,12 @@ module diatom_module
 
   type quantaT
     real(rk) :: I1 ! nuclear spin 1
+    real(rk) :: I2 ! nuclear spin 2
     real(rk) :: Itot ! total nuclear spin (e.g. D2: Itot=0, 1, 2)
     real(rk) :: F1  ! \hat{F1} = \hat{I1} + \hat{J}
+    real(rk) :: Ftot ! \hat{F} = \hat{F1} + \hat{I2}
     INTEGER(ik) :: index_F1 ! index of the F1 in F1_list
+    INTEGER(ik) :: index_Ftot ! index of the Ftot in Ftot_list
     real(rk)     :: Jrot       ! J - real
     integer(ik)  :: irot       ! index of the J value in J_list
     integer(ik)  :: istate     ! e-state
@@ -335,7 +351,7 @@ module diatom_module
     integer(ik)  :: ivib = 1   ! vibrational quantum number counting all vib-contracted states
     integer(ik)  :: ilevel = 1  ! primitive quantum
     integer(ik)  :: iroot       ! running number
-    integer(ik)  :: iF1_ID       ! running number within the same F and parity
+    integer(ik)  :: iF_ID        ! running number within the same hyperfine F block
     integer(ik)  :: iJ_ID       ! running number within the same J
     integer(ik)  :: iparity = 0
     integer(ik)  :: igamma = 1
@@ -492,10 +508,11 @@ module diatom_module
     character(len=cl)    :: geom_file = 'pot.fit'
     character(len=cl)    :: output_file = 'fitting'
     character(len=cl)    :: fit_type = 'LINUR'      ! to switch between fitting methods.
+    character(len=cl)    :: weighting = 'WEIGHTS'   ! 'WEIGHTS' (default) or 'UNCERTAINTIES'/'UNCERTAINTY' (1/unc)
     real(rk)             :: threshold_coeff    = -1e-18
     real(rk)             :: threshold_lock     = -1e-18
     real(rk)             :: threshold_obs_calc  = -1e-16
-    real(rk)             :: svd_tol  = 0.1d0
+    real(rk)             :: svd_tol  = 1.0d-2
     real(rk)             :: zpe=0
     logical              :: shift_to_zpe = .true.   !
     real(rk)             :: fit_scaling=1.0_rk         ! scaling the fitting correction with this factor >0 and <1
@@ -529,11 +546,12 @@ module diatom_module
     integer(ik),pointer :: ilevel(:)=>null()      ! level index
   end type contract_solT
 
-  type F1_hyperfine_steup_T
-    real(rk) :: I1
+  type hyperfine_setup_T
+    real(rk) :: I1 = -1.0_rk
+    real(rk) :: I2 = -1.0_rk
     real(rk) :: fit_bound_ratio
     character(cl) :: fit_optimization_algorithm
-  end type F1_hyperfine_steup_T
+  end type hyperfine_setup_T
   !
   integer, parameter :: trk        = selected_real_kind(12)
   integer,parameter  :: jlist_max = 500
@@ -592,9 +610,13 @@ module diatom_module
   real(rk), allocatable :: vibrational_contrfunc(:,:)
   type(quantaT), allocatable :: vibrational_quantum_number(:)
   integer(ik) :: vibrational_totalroots
-  type(F1_hyperfine_steup_T) :: F1_hyperfine_setup
+  type(hyperfine_setup_T) :: hyperfine_setup
+  integer(ik) :: hyperfine_case = 0
   integer(ik), parameter :: GLOBAL_NUM_HFCC_OBJECT = 8
-  type(FieldListT) :: hfcc1(GLOBAL_NUM_HFCC_OBJECT)
+  integer(ik), parameter :: GLOBAL_NUM_HFCC12_OBJECT = 2
+  type(FieldListT), target :: hfcc1(GLOBAL_NUM_HFCC_OBJECT)
+  type(FieldListT), target :: hfcc2(GLOBAL_NUM_HFCC_OBJECT)
+  type(FieldListT), target :: hfcc12(GLOBAL_NUM_HFCC12_OBJECT)
   !
   real(rk),allocatable :: overlap_matelem(:,:)
   !
@@ -604,7 +626,7 @@ module diatom_module
     nac_omega_obj,overlap_matelem,Diab_omega_obj,Dipole_omega_obj, setup_factorials_lookup,&
     check_point_eigenfunc,check_point_dipoles,check_point_basis_set,compute_vib_integrals
   !
-  save grid, Intensity, fitting, action, job, gridvalue_allocated, fields_allocated, hfcc1
+  save grid, Intensity, fitting, action, job, gridvalue_allocated, fields_allocated, hfcc1, hfcc2, hfcc12
   !
 contains
   !
@@ -912,6 +934,10 @@ contains
 
         do i = 1, GLOBAL_NUM_HFCC_OBJECT
           allocate(hfcc1(i)%field(nestates), stat=alloc)
+          allocate(hfcc2(i)%field(nestates), stat=alloc)
+        end do
+        do i = 1, GLOBAL_NUM_HFCC12_OBJECT
+          allocate(hfcc12(i)%field(nestates), stat=alloc)
         end do
         !
         ! initializing the fields
@@ -1327,12 +1353,20 @@ contains
         !
         job%basis_set = 'KEEP'
         !
+        call read_line(eof,iut) ; if (eof) exit
+        call readu(w)
         do while (trim(w)/="".and.trim(w)/="END")
-          call read_line(eof,iut) ; if (eof) exit
-          call readu(w)
           select case(w)
           case("I")
-            call readf(F1_hyperfine_setup%I1)
+            if (nitems<2.or.nitems>3) call report("HYPERFINE: Please only enter one or two spin values.")
+            call read_spin(hyperfine_setup%I1)
+            if (nitems > 2) call read_spin(hyperfine_setup%I2)
+          case("I1")
+            if (nitems/=2) call report("HYPERFINE: Please only enter one spin value.")
+            call read_spin(hyperfine_setup%I1)
+          case("I2")
+            if (nitems/=2) call report("HYPERFINE: Please only enter one spin value.")
+            call read_spin(hyperfine_setup%I2)
           case default
             call report ("Unrecognized hyperfine keyword: "//trim(w),.true.)
           end select
@@ -1430,6 +1464,17 @@ contains
             !
             call readu(fitting%fit_type)
             !
+          case('WEIGHTING')
+            !
+            call readu(fitting%weighting)
+            !
+            select case (trim(fitting%weighting))
+            case ('UNCERTAINTIES','UNCERTAINTY','WEIGHTS','WEIGHT','NONE','DEFAULT')
+              continue
+            case default
+              call report ("Unrecognized WEIGHTING option in FITTING: "//trim(fitting%weighting),.true.)
+            end select
+            !
           case('THRESH_ASSIGN','THRESH_REASSIGN','THRESH_LOCK','LOCK','LOCK_QUANTA')
             !
             call readf(fitting%threshold_lock)
@@ -1439,7 +1484,7 @@ contains
             !
             call readf(fitting%threshold_obs_calc)
             !
-          case('SVD-TOL')
+          case('SVD-TOL','SVD_TOL','SVDTOL')
             !
             call readf(fitting%svd_tol)
             !
@@ -1794,6 +1839,19 @@ contains
         !
         fitting%Nenergies = iobs
         !
+        if (associated(fitting%obs)) then
+          select case (trim(fitting%weighting))
+          case ('UNCERTAINTIES','UNCERTAINTY')
+            do iobs = 1, fitting%Nenergies
+              if (fitting%obs(iobs)%weight > small_) then
+                fitting%obs(iobs)%weight = 1.0_rk / fitting%obs(iobs)%weight
+              else
+                fitting%obs(iobs)%weight = 0.0_rk
+              endif
+            enddo
+          end select
+        endif
+        !
         if (trim(w)/="".and.trim(w)/="END") then
           call report ('wrong last line in FITTING ',.false.)
         endif
@@ -1803,7 +1861,10 @@ contains
            "SPIN-SPIN","SPIN-SPIN-O","BOBROT","BOB-ROT","BETA","SPIN-ROT","SPIN-ROTATION","DIABATIC","DIABAT",&
            "LAMBDA-OPQ","LAMBDA-P2Q","LAMBDA-Q","LAMBDAOPQ","LAMBDAP2Q","LAMBDAQ","NAC","BOBVIB","ALPHA",&
            "MAGNETIC","MAGNETIC-X","QUADRUPOLE","MAGNETROT","MAGNETIC-ROT", &
-           "HFCC-BF", "HFCC-A", "HFCC-C", "HFCC-D", "HFCC-CI", "HFCC-EQQ0", "HFCC-EQQ2", "HFCC-II")
+           "HFCC-BF-1", "HFCC-A-1", "HFCC-C-1", "HFCC-D-1", "HFCC-CI-1", "HFCC-CIP-1", "HFCC-EQQ0-1", "HFCC-EQQ2-1", &
+           "HFCC-BF-2", "HFCC-A-2", "HFCC-C-2", "HFCC-D-2", "HFCC-CI-2", "HFCC-CIP-2", "HFCC-EQQ0-2", "HFCC-EQQ2-2", &
+           "HFCC-BF", "HFCC-A", "HFCC-C", "HFCC-D", "HFCC-CI", "HFCC-CIP", "HFCC-EQQ0", "HFCC-EQQ2", &
+           "HFCC-II", "HFCC-II-D", "HFCC-II-DIPOLE", "HFCC-IIS", "HFCC-II-SCALAR")
         !
         ibraket = 0
         !
@@ -2102,367 +2163,80 @@ contains
           !
           intensity%tdm = .true.
           !
-        case("HFCC-BF")
-          !
-          hfcc1(1)%num_field = hfcc1(1)%num_field + 1
-          iobject(21) = iobject(21) + 1
-          call reada(iTAG) ; jTAG = iTAG
-          !call StateStart(iTAG,iref)
-          call StateCheck(iTAG,iref)
-          jref = iref
-          !
-          ! find the corresponding potential
-          include_state = .false.
-          loop_istate_hfcc_bf : do istate=1, Nestates
-            do jstate=1, Nestates
-              if (iref==poten(istate)%iref.and.jref==poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_bf
-              endif
-            enddo
-          enddo loop_istate_hfcc_bf
-          !
-          ! Check if it was defined before
-          do istate=1, hfcc1(1)%num_field - 1
-            if (iref==hfcc1(1)%field(istate)%iref.and.jref==hfcc1(1)%field(istate)%jref) then
-              call report ("Fermi contact object is repeated",.true.)
-            endif
-          enddo
-          !
-          if (.not.include_state) then
-            !write(out,"('The Fermi-contact term ',2i8,' is skipped')") iref,jref
-            hfcc1(1)%num_field = hfcc1(1)%num_field - 1
-            do while (trim(w)/="".and.trim(w)/="END")
-              call read_line(eof,iut) ; if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-          !
-          field => hfcc1(1)%field(hfcc1(1)%num_field)
-          !
-          call set_field_refs(field, iref, jref, istate_, jstate_,iTAG,iTAG)
-          field%class = "HFCC-BF-1"
-          if (action%fitting) call report ("Fermi-contact object cannot appear after FITTING",.true.)
-          !
-        case("HFCC-A")
-          hfcc1(2)%num_field = hfcc1(2)%num_field + 1
-          iobject(22) = iobject(22) + 1
-          call reada(iTAG)
-          !call StateStart(iTAG,iref)
-          call StateCheck(iTAG,iref)
-          jref = iref
-          !
-          ! find the corresponding potential
-          include_state = .false.
-          loop_istate_hfcc_a : do istate=1, Nestates
-            do jstate=1, Nestates
-              if (iref==poten(istate)%iref.and.jref==poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_a
-              endif
-            enddo
-          enddo loop_istate_hfcc_a
-          !
-          ! Check if it was defined before
-          do istate=1, hfcc1(2)%num_field - 1
-            if (iref==hfcc1(2)%field(istate)%iref.and.jref==hfcc1(2)%field(istate)%jref) then
-              call report ("Nuclear spin -- orbit object is repeated",.true.)
-            endif
-          enddo
-          !
-          if (.not.include_state) then
-            !write(out,"('The Nuclear spin -- orbit ',2i8,' is skipped')") iref,jref
-            hfcc1(2)%num_field = hfcc1(2)%num_field - 1
-            do while (trim(w)/="".and.trim(w)/="END")
-              call read_line(eof,iut) ; if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-          !
-          field => hfcc1(2)%field(hfcc1(2)%num_field)
-          !
-          call set_field_refs(field, iref, jref, istate_, jstate_,iTAG,iTAG)
-          field%class = "HFCC-A-1"
-          if (action%fitting) call report ("Nuclear spin -- orbit object cannot appear after FITTING",.true.)
-          !
-        case("HFCC-C")
-          hfcc1(3)%num_field = hfcc1(3)%num_field + 1
-          iobject(23) = iobject(23) + 1
-          call reada(iTAG)
-          !call StateStart(iTAG,iref)
-          call StateCheck(iTAG,iref)
-          jref = iref
-          !
-          ! find the corresponding potential
-          include_state = .false.
-          loop_istate_hfcc_c : do istate=1, Nestates
-            do jstate=1, Nestates
-              if (iref==poten(istate)%iref.and.jref==poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_c
-              endif
-            enddo
-          enddo loop_istate_hfcc_c
-          !
-          ! Check if it was defined before
-          do istate=1, hfcc1(3)%num_field - 1
-            if (iref==hfcc1(3)%field(istate)%iref.and.jref==hfcc1(3)%field(istate)%jref) then
-              call report ("Diagonal nuclear spin - electron spin dipole-dipole object is repeated",.true.)
-            endif
-          enddo
-          !
-          if (.not.include_state) then
-            !write(out,"('Diagonal nuclear spin - electron spin dipole-dipole term ',2i8,' is skipped')") iref,jref
-            hfcc1(3)%num_field = hfcc1(3)%num_field - 1
-            do while (trim(w)/="".and.trim(w)/="END")
-              call read_line(eof,iut) ; if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-          !
-          field => hfcc1(3)%field(hfcc1(3)%num_field)
-          !
-          call set_field_refs(field, iref, jref, istate_, jstate_,iTAG,iTAG)
-          field%class = "HFCC-C-1"
-          if (action%fitting) then
-            call report ("Diagonal nuclear spin - electron spin dipole-dipole object cannot appear after FITTING",.true.)
-          endif
-          !
-        case("HFCC-D")
-          hfcc1(4)%num_field = hfcc1(4)%num_field + 1
-          iobject(24) = iobject(24) + 1
-          call reada(iTAG)
-          !call StateStart(iTAG,iref)
-          call StateCheck(iTAG,iref)
-          jref = iref
-          !
-          ! find the corresponding potential
-          include_state = .false.
-          loop_istate_hfcc_d : do istate=1, Nestates
-            do jstate=1, Nestates
-              if (iref==poten(istate)%iref.and.jref==poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_d
-              endif
-            enddo
-          enddo loop_istate_hfcc_d
-          !
-          ! Check if it was defined before
-          do istate=1, hfcc1(4)%num_field - 1
-            if (iref==hfcc1(4)%field(istate)%iref.and.jref==hfcc1(4)%field(istate)%jref) then
-              call report ("Off-diagonal nuclear spin - electron spin dipole-dipole object  is repeated",.true.)
-            endif
-          enddo
-          !
-          if (.not.include_state) then
-            !write(out,"('The Off-diagonal nuclear spin - electron spin dipole-dipole object ',2i8,' is skipped')") iref,jref
-            hfcc1(4)%num_field = hfcc1(4)%num_field - 1
-            do while (trim(w)/="".and.trim(w)/="END")
-              call read_line(eof,iut) ; if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-          !
-          field => hfcc1(4)%field(hfcc1(4)%num_field)
-          !
-          call set_field_refs(field, iref, jref, istate_, jstate_,iTAG,iTAG)
-          field%class = "HFCC-D-1"
-          if (action%fitting) then
-            call report ("Off-diagonal nuclear spin - electron spin dipole-dipole object cannot appear after FITTING",.true.)
-          endif
-        case("HFCC-CI")
-          !
-          hfcc1(5)%num_field = hfcc1(5)%num_field + 1
-          iobject(25) = iobject(25) + 1
-          call reada(iTAG)
-          !call StateStart(iTAG,iref)
-          call StateCheck(iTAG,iref)
-          jref = iref
-          !
-          ! find the corresponding potential
-          include_state = .false.
-          loop_istate_hfcc_ci : do istate=1, Nestates
-            do jstate=1, Nestates
-              if (iref==poten(istate)%iref.and.jref==poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_ci
-              endif
-            enddo
-          enddo loop_istate_hfcc_ci
-          !
-          ! Check if it was defined before
-          do istate=1, hfcc1(5)%num_field - 1
-            if (iref==hfcc1(5)%field(istate)%iref.and.jref==hfcc1(5)%field(istate)%jref) then
-              call report ("Nuclear spin -- rotation object is repeated",.true.)
-            endif
-          enddo
-          !
-          if (.not.include_state) then
-            !write(out,"('The Fermi-contact term ',2i8,' is skipped')") iref,jref
-            hfcc1(5)%num_field = hfcc1(5)%num_field - 1
-            do while (trim(w)/="".and.trim(w)/="END")
-              call read_line(eof,iut) ; if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-          !
-          field => hfcc1(5)%field(hfcc1(5)%num_field)
-          !
-          call set_field_refs(field, iref, jref, istate_, jstate_,iTAG,iTAG)
-          field%class = "HFCC-CI-1"
-          if (action%fitting) call report ("Nuclear spin -- rotation object cannot appear after FITTING",.true.)
-          !
-        case("HFCC-EQQ0")
-          hfcc1(6)%num_field = hfcc1(6)%num_field + 1
-          iobject(26) = iobject(26) + 1
-          call reada(iTAG)
-          !call StateStart(iTAG,iref)
-          call StateCheck(iTAG,iref)
-          jref = iref
-          !
-          ! find the corresponding potential
-          include_state = .false.
-          loop_istate_hfcc_eqq0 : do istate=1, Nestates
-            do jstate=1, Nestates
-              if (iref==poten(istate)%iref.and.jref==poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_eqq0
-              endif
-            enddo
-          enddo loop_istate_hfcc_eqq0
-          !
-          ! Check if it was defined before
-          do istate=1, hfcc1(6)%num_field - 1
-            if (iref==hfcc1(6)%field(istate)%iref.and.jref==hfcc1(6)%field(istate)%jref) then
-              call report ("Diagonal nuclear electric quadrupole object is repeated",.true.)
-            endif
-          enddo
-          !
-          if (.not.include_state) then
-            !write(out,"('Diagonal nuclear electric quadrupole term ',2i8,' is skipped')") iref,jref
-            hfcc1(6)%num_field = hfcc1(6)%num_field - 1
-            do while (trim(w)/="".and.trim(w)/="END")
-              call read_line(eof,iut) ; if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-          !
-          field => hfcc1(6)%field(hfcc1(6)%num_field)
-          !
-          call set_field_refs(field, iref, jref, istate_, jstate_,iTAG,iTAG)
-          field%class = "HFCC-EQQ0-1"
-          if (action%fitting) call report ("Diagonal nuclear electric quadrupole object cannot appear after FITTING",.true.)
-          !
-        case("HFCC-EQQ2")
-          hfcc1(7)%num_field = hfcc1(7)%num_field + 1
-          iobject(27) = iobject(27) + 1
-          call reada(iTAG)
-          !call StateStart(iTAG,iref)
-          call StateCheck(iTAG,iref)
-          jref = iref
-          !
-          ! find the corresponding potential
-          include_state = .false.
-          loop_istate_hfcc_eqq2 : do istate=1, Nestates
-            do jstate=1, Nestates
-              if (iref==poten(istate)%iref.and.jref==poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_eqq2
-              endif
-            enddo
-          enddo loop_istate_hfcc_eqq2
-          !
-          ! Check if it was defined before
-          do istate=1, hfcc1(7)%num_field - 1
-            if (iref==hfcc1(7)%field(istate)%iref.and.jref==hfcc1(7)%field(istate)%jref) then
-              call report ("Off-diagonal nuclear electric quadrupole object is repeated",.true.)
-            endif
-          enddo
-          !
-          if (.not.include_state) then
-            !write(out,"('Off-diagonal nuclear electric quadrupole term ',2i8,' is skipped')") iref,jref
-            hfcc1(7)%num_field = hfcc1(7)%num_field - 1
-            do while (trim(w)/="".and.trim(w)/="END")
-              call read_line(eof,iut) ; if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-          !
-          field => hfcc1(7)%field(hfcc1(7)%num_field)
-          !
-          call set_field_refs(field, iref, jref, istate_, jstate_,iTAG,iTAG)
-          field%class = "HFCC-EQQ2-1"
-          if (action%fitting) call report ("Off-diagonal nuclear electric quadrupole cannot appear after FITTING",.true.)
-          !
-        case("HFCC-II")
-
-          hfcc1(8)%num_field = hfcc1(8)%num_field + 1
-          iobject(28) = iobject(28) + 1
-
-          call reada(iTAG)
-          call StateCheck(iTAG, iref)
-          jref = iref
-
-          ! Find the corresponding potential.
-          include_state = .false.
-          loop_istate_hfcc_ii : do istate = 1, Nestates
-            do jstate = 1, Nestates
-              if (iref == poten(istate)%iref .and. jref == poten(jstate)%iref) then
-                include_state = .true.
-                istate_ = istate
-                jstate_ = jstate
-                exit loop_istate_hfcc_ii
-              endif
-            enddo
-          enddo loop_istate_hfcc_ii
-
-          ! Check whether this object has already been defined.
-          do istate = 1, hfcc1(8)%num_field - 1
-            if (iref == hfcc1(8)%field(istate)%iref .and. &
-                jref == hfcc1(8)%field(istate)%jref) then
-              call report("Nuclear spin-nuclear spin dipole-dipole object is repeated", .true.)
-            endif
-          enddo
-
-          if (.not. include_state) then
-            hfcc1(8)%num_field = hfcc1(8)%num_field - 1
-            do while (trim(w) /= "" .and. trim(w) /= "END")
-              call read_line(eof, iut)
-              if (eof) exit
-              call readu(w)
-            enddo
-            cycle
-          endif
-
-          field => hfcc1(8)%field(hfcc1(8)%num_field)
-
-          call set_field_refs(field, iref, jref, istate_, jstate_, iTAG, iTAG)
-          field%class = "HFCC-II-12"
-
-          if (action%fitting) then
-            call report("Nuclear spin-nuclear spin dipole-dipole object cannot appear after FITTING", .true.)
-          endif
+        !! start to read the hyperfine coupling constant/curves (hfcc)
+        case("HFCC-BF", "HFCC-BF-1")
+          call input_hfcc_field(hfcc1(1), 21, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-A", "HFCC-A-1")
+          call input_hfcc_field(hfcc1(2), 22, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-C", "HFCC-C-1")
+          call input_hfcc_field(hfcc1(3), 23, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-D", "HFCC-D-1")
+          call input_hfcc_field(hfcc1(4), 24, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-CI", "HFCC-CI-1")
+          call input_hfcc_field(hfcc1(5), 25, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-CIP", "HFCC-CIP-1")
+          call input_hfcc_field(hfcc1(6), 26, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-EQQ0", "HFCC-EQQ0-1")
+          call input_hfcc_field(hfcc1(7), 27, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-EQQ2", "HFCC-EQQ2-1")
+          call input_hfcc_field(hfcc1(8), 28, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-BF-2")
+          call input_hfcc_field(hfcc2(1), 31, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-A-2")
+          call input_hfcc_field(hfcc2(2), 32, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-C-2")
+          call input_hfcc_field(hfcc2(3), 33, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-D-2")
+          call input_hfcc_field(hfcc2(4), 34, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-CI-2")
+          call input_hfcc_field(hfcc2(5), 35, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-CIP-2")
+          call input_hfcc_field(hfcc2(6), 36, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-EQQ0-2")
+          call input_hfcc_field(hfcc2(7), 37, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-EQQ2-2")
+          call input_hfcc_field(hfcc2(8), 38, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-II", "HFCC-II-D", "HFCC-II-DIPOLE")
+          call input_hfcc_field(hfcc12(1), 41, ierr)
+          if (ierr /= 0) cycle
+          !!
+        case("HFCC-IIS", "HFCC-II-SCALAR")
+          call input_hfcc_field(hfcc12(2), 42, ierr)
+          if (ierr /= 0) cycle
+          !!
+        !! end of hyperfine coupling constant/curve (hfcc)
           !
         case("ABINITIO")
           !
@@ -2805,12 +2579,21 @@ contains
             !
             call readu(field%weighting%wtype)
             !
-            if (trim(field%weighting%wtype)=="PS1997") then
+            select case (trim(field%weighting%wtype))
+            case ("PS1997")
               !
               call readf(field%weighting%alpha)
               call readf(field%weighting%Vtop)
               !
-            endif
+            case ("UNCERTAINTIES","UNCERTAINTY","GRID","WEIGHT","WEIGHTS","NONE","DEFAULT")
+              !
+              continue
+              !
+            case default
+              !
+              call report ("Unrecognized WEIGHTING option: "//trim(field%weighting%wtype),.true.)
+              !
+            end select
             !
           case("MORPHING","MORPH")
             !
@@ -3317,6 +3100,19 @@ contains
           call read_line(eof,iut) ; if (eof) exit
           call readu(w)
         enddo
+        !
+        if (trim(field%class(1:4))=="ABIN" .and. associated(field%weight)) then
+          select case (trim(field%weighting%wtype))
+          case ("UNCERTAINTIES","UNCERTAINTY")
+            do iparam = 1, field%Nterms
+              if (field%weight(iparam) > small_) then
+                field%weight(iparam) = 1.0_rk / field%weight(iparam)
+              else
+                field%weight(iparam) = 0.0_rk
+              endif
+            enddo
+          end select
+        endif
         !
       case("SYMGROUP","SYMMETRY","SYMM","SYM","SYM_GROUP")
         !
@@ -4123,9 +3919,131 @@ contains
     !enddo
     !
 
+    if (action%hyperfine) call validate_hyperfine_spins()
+
     if( job%zEchoInput) write(out,"('(<--- End of the input.)'/)")
 
   contains
+    subroutine read_spin(spin)
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      real(rk), intent(inout) :: spin
+      character(len=cl) :: text
+      integer :: spin_iostat
+
+      if (spin>=0.0_rk) call report("HYPERFINE: a nuclear-spin value was supplied more than once.")
+      call reada(text)
+      read(text,*,iostat=spin_iostat) spin
+      if (spin_iostat/=0) call report("HYPERFINE: invalid nuclear-spin value: "//trim(text))
+      if (.not.ieee_is_finite(spin)) call report("HYPERFINE: nuclear spins must be finite.")
+      if (spin<0.0_rk) call report("HYPERFINE: nuclear spins must be non-negative.")
+      if (abs(spin-0.5_rk*anint(2.0_rk*spin))>10.0_rk*small_) &
+        call report("HYPERFINE: nuclear spins must be integers or half-integers.")
+    end subroutine read_spin
+
+    subroutine validate_hyperfine_spins()
+      use atomic_and_nuclear_data, only: get_z,get_a,get_m,nuclear_spin
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      real(rk) :: expected(2),supplied(2),spins_used(2)
+      character(len=len(symbol1)) :: atoms(2)
+      integer :: i,z,a,m,nactive,ninput
+
+      if (trim(symbol1)=="Undefined".or.trim(symbol2)=="Undefined") &
+        call report("HYPERFINE requires an explicit ATOMS specification.")
+      atoms = [symbol1,symbol2]
+      supplied = [hyperfine_setup%I1,hyperfine_setup%I2]
+      ninput = count(supplied>=0.0_rk)
+      if (ninput==1.and.supplied(1)<0.0_rk) &
+        call report("HYPERFINE: I2 must be supplied together with I1. For one spin, use I or I1.")
+
+      ! Read the nuclear spins of the specified isotopes from the internal database.
+      do i=1,2
+        z = get_z(atoms(i))
+        a = get_a(atoms(i))
+        m = get_m(atoms(i))
+        if (z<=0.or.(index(atoms(i),'-')>0.and.a<=0)) then
+          write(out,'(a,i0,3a)') 'HYPERFINE: cannot identify atom ',i,' (',trim(atoms(i)),').'
+          call report("Cannot validate the nuclear spin from ATOMS.")
+        endif
+        if (a>0.and.m>=0) then
+          expected(i) = nuclear_spin(z,a,m)
+        elseif (a>0) then
+          expected(i) = nuclear_spin(z,a)
+        elseif (m>=0) then
+          expected(i) = nuclear_spin(z,m=m)
+        else
+          expected(i) = nuclear_spin(z)
+        endif
+        if (.not.ieee_is_finite(expected(i)).or.expected(i)<0.0_rk) then
+          write(out,'(a,i0,3a)') 'HYPERFINE: nuclear spin unavailable for atom ',i,' (',trim(atoms(i)),').'
+          call report("Cannot validate the nuclear spin from the isotope database.")
+        endif
+      enddo
+
+      ! If no input, use database values. 
+      ! Otherwise, use the input values and warn if they differ from the database.
+      ! If a nucleus has zero spin in the database, it cannot be assigned a non-zero value.
+      spins_used = expected
+      nactive = count(spins_used>10.0_rk*small_)
+      if (ninput==0) write(out,'(/a)') 'HYPERFINE: using nuclear spins from the isotope database.'
+      select case(nactive)
+      case(0)
+        call report("HYPERFINE: both isotope nuclei have zero spin. "// &
+                    "Disable hyperfine calculations or check the isotope information.")
+      case(1)
+        ! DATABASE: Heteronuclear molecule with only one non-zero spin
+        select case(ninput)
+        case(1)
+          do i=1,2
+            if (expected(i)>10.0_rk*small_) spins_used(i) = supplied(1)
+          enddo
+        case(2)
+          do i=1,2
+            if (expected(i)<=10.0_rk*small_.and.supplied(i)>10.0_rk*small_) then
+              write(out,'(a,i0,3a)') 'HYPERFINE: atom ',i,' (',trim(atoms(i)), &
+                ') has zero nuclear spin in the database.'
+              call report("HYPERFINE: a zero-spin isotope cannot be assigned a non-zero nuclear spin.")
+            endif
+          enddo
+          spins_used = supplied
+        end select
+        hyperfine_case = 1
+        write(out,'(a)') 'Hyperfine coupling case: single non-zero-spin nucleus, J + I = F.'
+      case(2)
+        if (trim(symbol1)==trim(symbol2)) then
+          ! DATABASE: Homonuclear diatomic with two non-zero spins
+          if (ninput>1) &
+            call report("HYPERFINE: Homonuclear diatomics only require one common nuclear spin, not two values.")
+          if (ninput==1) spins_used = supplied(1)
+          if (sym%Nrepresen/=4) call report("Homonuclear hyperfine requires 4 symmetry irreps (C2v-like).")
+          hyperfine_case = 2
+          write(out,'(a)') 'Hyperfine coupling case: homonuclear, I1 + I2 = I, I + J = F.'
+        else
+          ! DATABASE: Heteronuclear diatomic with two non-zero spins
+          if (ninput==1) &
+            call report("HYPERFINE: both isotope nuclei have non-zero spin, but only one value was supplied. "// &
+                        "Specify both I1 and I2 in ATOMS order. "// &
+                        "To test zero spin, explicitly enter 0 for the corresponding nucleus.")
+          if (ninput==2) spins_used = supplied
+          hyperfine_case = 3
+          write(out,'(a)') 'Hyperfine coupling case: heteronuclear, J + I1 = F1, F1 + I2 = F.'
+        endif
+      end select
+
+      if (all(spins_used<=10.0_rk*small_)) &
+        call report("Please disable hyperfine calculation, as both nuclear spins used are zero.")
+      hyperfine_setup%I1 = spins_used(1)
+      hyperfine_setup%I2 = spins_used(2)
+
+      write(out,'(/a)') 'Hyperfine nuclear spins used:'
+      do i=1,2
+        write(out,'(a,i0,3a,f4.1)') '  Atom ',i,': ',trim(atoms(i)),', I = ',spins_used(i)
+        if (abs(spins_used(i)-expected(i))>10.0_rk*small_) then
+          write(out,'(a,i0,3a,f4.1,a,f4.1)') 'WARNING: HYPERFINE atom ',i,' (',trim(atoms(i)), &
+            '): database spin = ',expected(i),'; using spin = ',spins_used(i)
+        endif
+      enddo
+    end subroutine validate_hyperfine_spins
+
     !
     subroutine input_quanta(w,field)
       !
@@ -4265,7 +4183,7 @@ contains
          dst%forcename = src%forcename
          dst%grid = src%grid
          dst%weight = src%weight
-         dst%link(Nparam) = src%link(Nparam)
+         dst%link = src%link
          dst%fit_range = src%fit_range
          !
       else
@@ -4276,6 +4194,61 @@ contains
       endif
       !
     end subroutine transfer_field_properties
+    !
+    subroutine input_hfcc_field(hfcc_obj, iType, ierr)
+      ! This subroutine is merged from all cases of hfcc in the old code.
+      type(FieldListT), target, intent(inout) :: hfcc_obj
+      integer(ik), intent(in) :: iType
+      integer(ik), intent(out) :: ierr
+      !
+      ierr = 0
+      hfcc_obj%num_field = hfcc_obj%num_field + 1
+      iobject(iType) = iobject(iType) + 1
+      !
+      call reada(iTAG)
+      call StateCheck(iTAG, iref)
+      jref = iref
+      !
+      ! Find the corresponding potential.
+      include_state = .false.
+      loop_istate_hfcc : do istate = 1, Nestates
+        do jstate = 1, Nestates
+          if (iref == poten(istate)%iref .and. jref == poten(jstate)%iref) then
+            include_state = .true.
+            istate_ = istate
+            jstate_ = jstate
+            exit loop_istate_hfcc
+          endif
+        enddo
+      enddo loop_istate_hfcc
+      !
+      ! Check whether this object has already been defined.
+      do istate = 1, hfcc_obj%num_field - 1
+        if (iref == hfcc_obj%field(istate)%iref .and. &
+            jref == hfcc_obj%field(istate)%jref) then
+          call report (trim(CLASSNAMES(iType))//" is repeated", .true.)
+        endif
+      enddo
+      !
+      if (.not. include_state) then
+        hfcc_obj%num_field = hfcc_obj%num_field - 1
+        iobject(iType) = iobject(iType) - 1
+        do while (trim(w) /= "" .and. trim(w) /= "END")
+          call read_line(eof, iut)
+          if (eof) exit
+          call readu(w)
+        enddo
+        ierr = 1
+        return
+      endif
+      !
+      field => hfcc_obj%field(hfcc_obj%num_field)
+      !
+      call set_field_refs(field, iref, jref, istate_, jstate_, iTAG, iTAG)
+      field%class = trim(CLASSNAMES(iType))
+      if (action%fitting) call report (trim(field%class)//" cannot appear after FITTING", .true.)
+      !
+    end subroutine input_hfcc_field
     !
     subroutine input_non_diagonal_field(Nobjects,iType,iobject,fields,ierr)
       !
@@ -5080,6 +5053,8 @@ contains
       !
     endif
     !
+    call update_linked_fields
+    !
     object_loop: do iobject = 1,Nobjects
       !
       Nmax = fieldmap(iobject)%Nfields
@@ -5119,6 +5094,10 @@ contains
           field => bobvib(iterm)
         case (21, 22, 23, 24, 25, 26, 27, 28)
           field => hfcc1(iobject - 20)%field(iterm)
+        case (31, 32, 33, 34, 35, 36, 37, 38)
+          field => hfcc2(iobject - 30)%field(iterm)
+        case (41, 42)
+          field => hfcc12(iobject - 40)%field(iterm)
         case (Nobjects-5)
           field => magnetrot(iterm)
         case (Nobjects-4)
@@ -5148,243 +5127,100 @@ contains
         case("GRID")
           !
           nterms = field%Nterms
+          N1 = 0
+          N2 = 0
+          if (field%grid(1) > rmin) N1 = 20
+          if (field%grid(nterms) < rmax) N2 = 20
+          !
+          allocate(xx(nterms+N1+N2), yy(nterms+N1+N2), stat=alloc)
+          call ArrayStart('extrap_tmp',alloc,size(xx),kind(xx))
+          call ArrayStart('extrap_tmp',alloc,size(yy),kind(yy))
+          xx = 0._rk
+          yy = 0._rk
+          !
+          do i=1, nterms
+            xx(N1+i) = field%grid(i)
+            yy(N1+i) = field%value(i)
+          enddo
           !
           ! Lorenzo Lodi, 13 February 2014
           ! This section will add extrapolated points at short and long bond lengths
           ! for tabulated `GRID' functions
-          ! and only for fitting
-          if( field%grid(1) > rmin ) then
-            if (iverbose>=4) write(out, '(/,A)') 'Extrapolating at short bond length curve ' // trim(field%name) // &
+          ! Recomputed dynamically on temporary arrays (xx, yy) so guide points update
+          ! smoothly during fitting without mutating field%grid / field%value in-place.
+          if (N1 > 0) then
+            if (iverbose>=4 .and. .not.gridvalue_allocated) &
+              write(out, '(/,A)') 'Extrapolating at short bond length curve ' // trim(field%name) // &
               ' (class ' // trim(field%class) // ')'
-
-            np = 20              ! I always add `np' short bond length guide points
-            ! I go one step `beyond' rmin to minimize interpolating artifacts at the end of the interval
-
-            x1=field%grid(1)  ; y1 =field%value(1)
-            x2=field%grid(2)  ; y2 =field%value(2)
-            allocate( xx(nterms+np), yy(nterms+np),ww(nterms+np),stat=alloc)
-            call ArrayStart('extrap_tmp',alloc,size(xx),kind(xx))
-            call ArrayStart('extrap_tmp',alloc,size(ww),kind(ww))
-            call ArrayStart('extrap_tmp',alloc,size(yy),kind(yy))
-            allocate( link_(nterms+np),stat=alloc)
-            if (alloc/=0) then
-              write(out,"('allocation problem: link_')")
-              stop 'allocation problem link_'
-            endif
-            allocate( forcename_(nterms+np),stat=alloc)
-            if (alloc/=0) then
-              write(out,"('allocation problem: forcename_')")
-              stop 'allocation problem forcename_'
-            endif
-            allocate( frange_(nterms+np),stat=alloc)
-            if (alloc/=0) then
-              write(out,"('allocation problem: frange_')")
-              stop 'allocation problem frange_'
-            endif
-            !
-            xx=0._rk
-            yy=0._rk
+            np = N1
+            x1 = field%grid(1) ; y1 = field%value(1)
+            x2 = field%grid(2) ; y2 = field%value(2)
             do i=1, np
-              xx(i) = rmin + (field%grid(1)-rmin)*real(i-2,rk) / real( np-1, rk)
+              xx(i) = rmin + (field%grid(1)-rmin)*real(i-2,rk) / real(np-1, rk)
             enddo
-            !
             select case(field%class)
-              !
             case ("POTEN")
-              !
-              if (iverbose>=4) write(out, '(A, I20)') 'Using A + B/r extrapolation; points added = ', np
+              if (iverbose>=4 .and. .not.gridvalue_allocated) &
+                write(out, '(A, I20)') 'Using A + B/r extrapolation; points added = ', np
               bb = -x1*x2*(y1-y2)/(x1-x2)
               aa = y1 - bb/x1
               do i=1, np
                 yy(i) = aa + bb/xx(i)
               enddo
-              !
             case ("DIPOLE")
-              if (iverbose>=4) write(out, '(A, I20)') 'Using A*r + B*r^2 extrapolation; points added = ', np
-              bb = (x2*y1- x1*y2) / (x1*x2 *(x1-x2) )
-              aa = (-bb*x1**2 + y1 ) / x1
+              if (iverbose>=4 .and. .not.gridvalue_allocated) &
+                write(out, '(A, I20)') 'Using A*r + B*r^2 extrapolation; points added = ', np
+              bb = (x2*y1 - x1*y2) / (x1*x2 *(x1-x2))
+              aa = (-bb*x1**2 + y1) / x1
               do i=1, np
                 yy(i) = aa*xx(i) + bb*xx(i)**2
               enddo
-              !
-            case default  ! linear extrapolation using the first two points to r = rmin - 1/(np-1)
-              if (iverbose>=4) write(out, '(A, I20)') 'Using linear extrapolation; points added = ', np
+            case default
+              if (iverbose>=4 .and. .not.gridvalue_allocated) &
+                write(out, '(A, I20)') 'Using linear extrapolation; points added = ', np
               do i=1, np
                 yy(i) = y1 + (xx(i)-x1) * (y1-y2)/(x1-x2)
               enddo
             end select
-            !
-            do i=np+1, np+nterms
-              xx(i) =  field%grid(i-np)
-              yy(i) =  field%value(i-np)
-            enddo
-            !
-            do i=1, np
-              write(forcename_(i),"(f8.4)") xx(i)
-            enddo
-            !
-            forcename_(np+1:) = field%forcename(1:)
-            !
-            ww(np+1:) = field%weight(1:) ; ww(1:np) = 0
-            !
-            link_(1:np)%iobject = 0
-            link_(1:np)%ifield = 0
-            link_(1:np)%iparam = 0
-            link_(np+1:) = field%link(1:)
-            !
-            frange_(1:np)%min = 0
-            frange_(1:np)%max = 0
-            frange_(1:np)%set = .false.
-            frange_(np+1:) = field%fit_range(1:)
-            !
-            nterms = np+nterms
-            field%Nterms = nterms
-            !
-            call ArrayMinus(trim(field%type),size(field%value),kind(field%value))
-            call ArrayMinus(trim(field%type),size(field%grid),kind(field%grid))
-            call ArrayMinus(trim(field%type),size(field%weight),kind(field%weight))
-            !
-            deallocate(field%grid, field%value, field%weight, field%forcename,stat=alloc)
-            deallocate(field%link)
-            deallocate(field%fit_range)
-            !
-            allocate(field%value(nterms),field%forcename(nterms),field%grid(nterms),field%weight(nterms),stat=alloc)
-            allocate(field%link(nterms),stat=alloc)
-            allocate(field%fit_range(nterms),stat=alloc); if (alloc/=0) stop 'allocation problem fit_range'
-            !
-            call ArrayStart(trim(field%type),alloc,nterms,kind(field%value))
-            call ArrayStart(trim(field%type),alloc,nterms,kind(field%grid))
-            call ArrayStart(trim(field%type),alloc,nterms,kind(field%weight))
-            !
-            field%link(:) = link_(:)
-            field%fit_range(:) = frange_(:)
-            field%grid  = xx
-            field%value = yy
-            field%forcename(:)= forcename_(:)
-            field%weight = ww
-            deallocate(xx, yy, ww,link_,forcename_,frange_)
-            call ArrayStop('extrap_tmp')
-            !
           endif
           !
-          !*************end of short bond length extrapolation **********************************************
-          nterms = field%Nterms
-          if( field%grid(nterms) < rmax) then
-            if (iverbose>=4) write(out, '(/,A)') 'Extrapolating at long bond length curve ' // trim(field%name) // &
+          if (N2 > 0) then
+            if (iverbose>=4 .and. .not.gridvalue_allocated) &
+              write(out, '(/,A)') 'Extrapolating at long bond length curve ' // trim(field%name) // &
               ' (class ' // trim(field%class) // ')'
-            !
-            np = 20    ! I always add `np' long bond length guide points
-            ! I go one step `beyond' rmax to minimize interpolating artifacts at the end of the interval
-            !
-            x1=field%grid(nterms-1)  ; y1 =field%value(nterms-1)
-            x2=field%grid(nterms)    ; y2 =field%value(nterms)
-            allocate( xx(nterms+np), yy(nterms+np),ww(nterms+np),stat=alloc)
-            call ArrayStart('extrap_tmp',alloc,size(xx),kind(xx))
-            call ArrayStart('extrap_tmp',alloc,size(ww),kind(ww))
-            call ArrayStart('extrap_tmp',alloc,size(yy),kind(yy))
-            allocate( link_(nterms+np),stat=alloc)
-            if (alloc/=0) then
-              write(out,"('allocation problem: link_tmp')")
-              stop 'allocation problem'
-            endif
-            !
-            allocate( forcename_(nterms+np),stat=alloc)
-            if (alloc/=0) then
-              write(out,"('allocation problem: forcename_')")
-              stop 'allocation problem forcename_'
-            endif
-            !
-            allocate( frange_(nterms+np),stat=alloc)
-            if (alloc/=0) then
-              write(out,"('allocation problem: frange_tmp')")
-              stop 'allocation problem'
-            endif
-            !
-            xx=0._rk
-            yy=0._rk
-            do i=1, nterms
-              xx(i) =  field%grid(i)
-              yy(i) =  field%value(i)
+            np = N2
+            x1 = field%grid(nterms-1) ; y1 = field%value(nterms-1)
+            x2 = field%grid(nterms)   ; y2 = field%value(nterms)
+            do i=1, np
+              xx(N1+nterms+i) = field%grid(nterms) + (rmax-field%grid(nterms))*real(i,rk) / real(np-1, rk)
             enddo
-            !
-            do i=nterms+1, nterms+np
-              xx(i) = field%grid(nterms) + (rmax-field%grid(nterms))*real(i-nterms,rk) / real( np-1, rk)
-            enddo
-            !
             select case(field%class)
-
             case ("POTEN")
-              if (iverbose>=4) write(out, '(A, I20)') 'Using De + A/r^6 extrapolation; points added = ', np
+              if (iverbose>=4 .and. .not.gridvalue_allocated) &
+                write(out, '(A, I20)') 'Using De + A/r^6 extrapolation; points added = ', np
               bb = (x1*x2)**6 * (y2-y1) / (x1**6 - x2**6)
               aa = y1 - bb/x1**6
-              !       write(out, '(A, 2F20.4)') 'Dissociation set to = ', aa !, bb
-              do i=nterms+1,nterms+np
+              do i=N1+nterms+1, N1+nterms+np
                 yy(i) = aa + bb / xx(i)**6
               enddo
-              !
             case ("DIPOLE")
-              if (iverbose>=4) write(out, '(A, I20)') 'Using A/r^2 + B/r^3 extrapolation; points added = ', np
+              if (iverbose>=4 .and. .not.gridvalue_allocated) &
+                write(out, '(A, I20)') 'Using A/r^2 + B/r^3 extrapolation; points added = ', np
               bb = x1*x2*(x1**2 * y1 - x2**2 * y2)/(x2-x1)
               aa = (y1*x1**3 - bb)/x1
-              do i=nterms+1,nterms+np
+              do i=N1+nterms+1, N1+nterms+np
                 yy(i) = aa/xx(i)**2 + bb / xx(i)**3
               enddo
-              !
-            case default  ! extrapolation using the last two points
-              if (iverbose>=4) write(out, '(A, I20)') 'Using linear extrapolation; points added = ', np
-              do i=nterms+1,nterms+np
+            case default
+              if (iverbose>=4 .and. .not.gridvalue_allocated) &
+                write(out, '(A, I20)') 'Using linear extrapolation; points added = ', np
+              do i=N1+nterms+1, N1+nterms+np
                 yy(i) = y1 + (xx(i)-x1) * (y1-y2)/(x1-x2)
               enddo
             end select
-            !
-            ww(1:nterms) = field%weight(1:nterms) ; ww(nterms+1:) = 0
-            !
-            do i=nterms+1, nterms+np
-              write(forcename_(i),"(f8.4)") xx(i)
-            enddo
-            !
-            forcename_(1:nterms) = field%forcename(1:nterms)
-            !
-            link_(1:np)%iobject = 0
-            link_(1:np)%ifield = 0
-            link_(1:np)%iparam = 0
-            link_(np+1:) = field%link(1:)
-            !
-            frange_(1:np)%min = 0
-            frange_(1:np)%max = 0
-            frange_(1:np)%set = .false.
-            frange_(np+1:) = field%fit_range(1:)
-            !
-            nterms = np+nterms
-            field%Nterms = nterms
-            !
-            call ArrayMinus(trim(field%type),size(field%value),kind(field%value))
-            call ArrayMinus(trim(field%type),size(field%grid),kind(field%grid))
-            call ArrayMinus(trim(field%type),size(field%weight),kind(field%weight))
-            !
-            deallocate(field%grid, field%value, field%weight, field%forcename,stat=alloc)
-            !
-            deallocate(field%link,field%fit_range)
-            !
-            allocate(field%value(nterms),field%forcename(nterms),field%grid(nterms),field%weight(nterms),stat=alloc)
-            allocate(field%link(nterms),field%fit_range(nterms),stat=alloc) ; if (alloc/=0) stop 'allocation error link-range'
-            !
-            call ArrayStart(trim(field%type),alloc,nterms,kind(field%value))
-            call ArrayStart(trim(field%type),alloc,nterms,kind(field%grid))
-            call ArrayStart(trim(field%type),alloc,nterms,kind(field%weight))
-            !
-            field%link(:) = link_(:)
-            field%fit_range(:) = frange_(:)
-            field%grid  = xx
-            field%value = yy
-            field%forcename(:)= forcename_(:)
-            field%weight = ww
-            deallocate(xx, yy, ww,link_,forcename_,frange_)
-            call ArrayStop('extrap_tmp')
-            !
           endif
           !
-          !*************end of long bond length extrapolation **********************************************
+          nterms = nterms + N1 + N2
           !
           ! build spline interpolant
           select case (field%interpolation_type)
@@ -5400,12 +5236,12 @@ contains
             call ArrayStart('spline_wk_vec-field',alloc,ngrid,kind(spline_wk_vec))
             !
             yp1= 0._rk ; ypn =0._rk  ! 1nd derivatives at the first and last point (ignored)
-            call spline(field%grid,field%value,field%Nterms,yp1,ypn,spline_wk_vec)
+            call spline(xx,yy,nterms,yp1,ypn,spline_wk_vec)
             !
             !$omp parallel do private(i) schedule(guided)
             do i=1,ngrid
               ! evaluate spline interpolant
-              call splint(field%grid,field%value,spline_wk_vec,field%Nterms,r(i),field%gridvalue(i))
+              call splint(xx,yy,spline_wk_vec,nterms,r(i),field%gridvalue(i))
             enddo
             !$omp end parallel do
             !
@@ -5414,31 +5250,20 @@ contains
             !
             ! -- . -- . -- . -- . -- . -- . -- . -- . -- . -- . -- . -- . -- .
           case("QUINTICSPLINES")  ! quintic spline
-            ! Lorenzo Lodi, 7 April 2016
-            ! Tests show that the present quintic spline interpolation does not give better interpolation results
-            ! than cubic splines. Furthermore the error seems to decrease as npoints**(-4)
-            ! instead of npoints**(-6). The reason for this behaviour is yet unknown, but possibly related
-            ! to a bad choice of the boundary conditions.
-            !
-            ! FOR NOW USE OF QUINTIC SPLINE INTERPOLATION IS NOT RECOMMENDED.
-            ! USE CUBIC SPLINES INSTEAD
             !
             if (iverbose>=6) write(out, '(A, I20)') 'Interpolating with quintic splines'
-            nterms=field%Nterms
             allocate(spline_wk_vec_B(nterms),stat=alloc); call ArrayStart('spline_wk_vec_B',alloc,nterms,kind(spline_wk_vec))
             allocate(spline_wk_vec_C(nterms),stat=alloc); call ArrayStart('spline_wk_vec_C',alloc,nterms,kind(spline_wk_vec))
             allocate(spline_wk_vec_D(nterms),stat=alloc); call ArrayStart('spline_wk_vec_D',alloc,nterms,kind(spline_wk_vec))
             allocate(spline_wk_vec_E(nterms),stat=alloc); call ArrayStart('spline_wk_vec_E',alloc,nterms,kind(spline_wk_vec))
             allocate(spline_wk_vec_F(nterms),stat=alloc); call ArrayStart('spline_wk_vec_F',alloc,nterms,kind(spline_wk_vec))
             !
-            call QUINAT(nterms,field%grid,field%value, spline_wk_vec_B, spline_wk_vec_C, &
+            call QUINAT(nterms,xx,yy, spline_wk_vec_B, spline_wk_vec_C, &
                         spline_wk_vec_D, spline_wk_vec_E, spline_wk_vec_F)
             !
             !$omp parallel do private(i) schedule(guided)
             do i=1,ngrid    ! evaluate spline interpolant
-!                 call splint(field%grid,field%value,spline_wk_vec,field%Nterms,r(i),field%gridvalue(i))
-
-              call splint_quint(field%grid,field%value,nterms,r(i),field%gridvalue(i), spline_wk_vec_B, &
+              call splint_quint(xx,yy,nterms,r(i),field%gridvalue(i), spline_wk_vec_B, &
                                 spline_wk_vec_C, spline_wk_vec_D, spline_wk_vec_E, spline_wk_vec_F)
             enddo
             !$omp end parallel do
@@ -5451,6 +5276,10 @@ contains
             ! -- . -- . -- . -- . -- . -- . -- . -- . -- . -- . -- . -- . -- .
             !
           end select
+          !
+          deallocate(xx, yy)
+          call ArrayStop('extrap_tmp')
+          nterms = field%Nterms
           !
           ! for dummy fields not used in fittings
           !j
@@ -5651,6 +5480,10 @@ contains
           field => bobvib(iterm)
         case (21, 22, 23, 24, 25, 26, 27, 28)
           field => hfcc1(iobject - 20)%field(iterm)
+        case (31, 32, 33, 34, 35, 36, 37, 38)
+          field => hfcc2(iobject - 30)%field(iterm)
+        case (41, 42)
+          field => hfcc12(iobject - 40)%field(iterm)
         case (Nobjects-5)
           field => magnetrot(iterm)
         case (Nobjects-4)
@@ -5703,7 +5536,8 @@ contains
         !
         if (trim(field%weighting%wtype)=="PS1997") then
           !
-          istate = field%iref
+          istate = field%istate
+          if (istate < 1 .or. istate > Nestates) istate = field%iref
           beta = field%weighting%alpha
           Vtop = field%weighting%Vtop
           !imin = (field%grid(1)-rmin) / real( np-1, rk)
@@ -7407,6 +7241,84 @@ contains
       !
     end function find_crossing_point_of_PECs
     !
+    function get_field_ptr(iobj, ifld) result(fptr)
+      integer(ik), intent(in) :: iobj, ifld
+      type(fieldT), pointer :: fptr
+      fptr => null()
+      if (iobj < 1 .or. iobj > Nobjects) return
+      if (ifld < 1 .or. ifld > fieldmap(iobj)%Nfields) return
+      select case (iobj)
+      case (1)
+        fptr => poten(ifld)
+      case (2)
+        fptr => spinorbit(ifld)
+      case (3)
+        fptr => l2(ifld)
+      case (4)
+        fptr => lxly(ifld)
+      case (5)
+        fptr => spinspin(ifld)
+      case (6)
+        fptr => spinspino(ifld)
+      case (7)
+        fptr => bobrot(ifld)
+      case (8)
+        fptr => spinrot(ifld)
+      case (9)
+        fptr => diabatic(ifld)
+      case (10)
+        fptr => lambdaopq(ifld)
+      case (11)
+        fptr => lambdap2q(ifld)
+      case (12)
+        fptr => lambdaq(ifld)
+      case (13)
+        fptr => nac(ifld)
+      case (14)
+        fptr => bobvib(ifld)
+      case (21, 22, 23, 24, 25, 26, 27, 28)
+        fptr => hfcc1(iobj - 20)%field(ifld)
+      case (Nobjects-5)
+        fptr => magnetrot(ifld)
+      case (Nobjects-4)
+        fptr => magnetictm(ifld)
+      case (Nobjects-3)
+        fptr => quadrupoletm(ifld)
+      case (Nobjects-2)
+        fptr => abinitio(ifld)
+      case (Nobjects)
+        fptr => dipoletm(ifld)
+      end select
+    end function get_field_ptr
+    !
+    subroutine update_linked_fields
+      integer(ik) :: ipass, iobj, ifld, ip, nfld
+      type(fieldT), pointer :: fsrc, fdst
+      type(linkT), pointer :: flnk
+      do ipass = 1, 2
+        do iobj = 1, Nobjects
+          if (iobj == Nobjects - 1) cycle
+          nfld = fieldmap(iobj)%Nfields
+          do ifld = 1, nfld
+            fdst => get_field_ptr(iobj, ifld)
+            if (.not.associated(fdst)) cycle
+            if (.not.associated(fdst%link) .or. .not.associated(fdst%value)) cycle
+            do ip = 1, fdst%Nterms
+              flnk => fdst%link(ip)
+              if (flnk%iobject /= 0) then
+                fsrc => get_field_ptr(flnk%iobject, flnk%ifield)
+                if (associated(fsrc)) then
+                  if (associated(fsrc%value) .and. flnk%iparam >= 1 .and. flnk%iparam <= fsrc%Nterms) then
+                    fdst%value(ip) = fsrc%value(flnk%iparam)
+                  endif
+                endif
+              endif
+            enddo
+          enddo
+        enddo
+      enddo
+    end subroutine update_linked_fields
+    !
   end subroutine map_fields_onto_grid
 
   subroutine duo_j0(iverbose_,J_list_,enerout,quantaout,nenerout)
@@ -8678,11 +8590,11 @@ contains
           !write(out,"('Error: ME_numerov is not implemented yet')")
           !stop 'Error: ME_numerov is not implemented yet'
           !
-          !iverbose
+          !nroots = min(nroots,ngrid-2),job%vibmax(istate)
           !
-          nroots = min(nroots,ngrid-2)
+          nroots = job%vibmax(istate)
           !
-          job%vibenermax(istate) = maxval(poten(istate)%gridvalue)
+          job%vibenermax(istate) = min(maxval(poten(istate)%gridvalue),job%vibenermax(istate))
           !
           call ME_numerov(nroots,(/grid%rmin,grid%rmax/),ngrid-1,ngrid-1,r,poten(istate)%gridvalue,mu_rr,1,0,&
                           job%vibenermax(istate),iverbose,vibener(1:nroots+1),vibmat)
@@ -9067,11 +8979,25 @@ contains
           field%matelem = 0
           !
           select case (iobject)
+          case (1)
+            ! poten%matelem is not used in Hamiltonian construction (contrenergy is used on diagonal)
+            continue
           case default
             !
             !$omp parallel do private(ilevel,jlevel) schedule(guided)
             do ilevel = 1,totalroots
               do jlevel = 1,ilevel
+                !
+                ! Fast state-pair filter: only integrate vibrational matrix elements for electronic
+                ! state pairs coupled by this field (exact, skips unused off-block state pairs).
+                if (.not.action%overlap) then
+                  if (iobject==Nobjects-1) then
+                    if (Nl2==0 .and. icontrvib(ilevel)%istate/=icontrvib(jlevel)%istate) cycle
+                  else
+                    if (.not.( (icontrvib(ilevel)%istate==field%istate.and.icontrvib(jlevel)%istate==field%jstate) .or. &
+                               (icontrvib(ilevel)%istate==field%jstate.and.icontrvib(jlevel)%istate==field%istate) )) cycle
+                  endif
+                endif
                 !
                 ! in the grid representation of the vibrational basis set
                 ! the matrix elements are evaluated simply by a summation of over the grid points
@@ -9086,6 +9012,8 @@ contains
                 !
                 !field%matelem(ilevel,jlevel)  = ddot(ngrid,psipsi,1,contrfunc(:,jlevel),1)
                 !
+                !psipsi_t  = sum(contrfunc(:,ilevel)*contrfunc(:,jlevel))
+                !
                 field%matelem(ilevel,jlevel)  = sum(contrfunc(:,ilevel)*(field%gridvalue(:))*contrfunc(:,jlevel))
                 !
                 ! A special case of the non-diagonal integration of NAC
@@ -9093,7 +9021,7 @@ contains
                 ! If intensity%threshold%dipole is given and TM is smaller than this threshold set the TM-value to zero
                 ! is applied to the dipole (iobject=Nobjects) and quadrupole (iobject=Nobjects-3) moments
                 !
-                if (iobject==Nobjects-5.or.iobject==Nobjects-4.or.iobject==Nobjects-3) then
+                if (iobject==Nobjects-5.or.iobject==Nobjects-4.or.iobject==Nobjects-3.or.iobject==Nobjects) then
                   if (abs(field%matelem(ilevel,jlevel))<intensity%threshold%dipole) field%matelem(ilevel,jlevel) = 0
                 endif
                 !
@@ -9829,11 +9757,11 @@ contains
         allocate(hmat(Ntotal,Ntotal),stat=alloc)
         call ArrayStart('hmat',alloc,size(hmat),kind(hmat))
         !
-        call Compute_rovibronic_Hamiltonian_in_lambda_sigma_representation(iverbose,jval,ngrid,Ntotal,Nlambdasigmas,&
-                                                                           sc,icontr,contrenergy,Nspin_max,multi_max,threej,hmat)
-
-        !call Compute_rovibron_Hamiltonian_lambda_S_repres_opt(iverbose,jval,ngrid,Ntotal,Nlambdasigmas,&
+        !call Compute_rovibronic_Hamiltonian_in_lambda_sigma_representation(iverbose,jval,ngrid,Ntotal,Nlambdasigmas,&
         !                                                                   sc,icontr,contrenergy,Nspin_max,multi_max,threej,hmat)
+
+        call Compute_rovibron_Hamiltonian_lambda_S_repres_opt(iverbose,jval,ngrid,Ntotal,Nlambdasigmas,&
+                                                                           sc,icontr,contrenergy,Nspin_max,multi_max,threej,hmat)
 
         !
         ! Transformation to the symmetrized basis set
@@ -11914,6 +11842,8 @@ contains
         loop_iso : do iso =1,Nspinorbits
           !
           field => spinorbit(iso)
+          if (.not.((istate==field%istate.and.jstate==field%jstate).or.&
+                    (istate==field%jstate.and.jstate==field%istate))) cycle
           !
           ! The selection rules are (Lefebvre-Brion and Field, Eq. (3.4.6)):
           ! Delta J = 0 ; Delta Omega  = 0 ; g<-/->u; e<->f; Sigma+<->Sigma-;
@@ -12141,6 +12071,9 @@ contains
               stop "Lx/L+ input is inconsistent with selection rules"
             endif
           endif
+          !
+          if (.not.((istate==field%istate.and.jstate==field%jstate).or.&
+                    (istate==field%jstate.and.jstate==field%istate))) cycle
           !
           ! the field entry in the input gives only one combination of the quantum numbers for
           ! the matrix element <State,Lambda,Spin|F|State',Lambda',Spin'>
@@ -13054,7 +12987,7 @@ subroutine Compute_rovibron_Hamiltonian_lambda_S_repres_opt(iverbose,jval,ngrid,
                 !$omp end critical
               endif
               
-              exit loop_iss
+              cycle loop_iss
             enddo ! isigmav
           enddo ! isigma2
         enddo ! ipermute
@@ -13245,9 +13178,9 @@ subroutine Compute_rovibron_Hamiltonian_lambda_S_repres_opt(iverbose,jval,ngrid,
       logical, intent(in) :: use_debug_print
       !
       type(fieldT), pointer :: field
-      integer(ik) :: ipermute, istate_, jstate_, ilambda_we, jlambda_we, isigma2, isigmav, itau
+      integer(ik) :: ipermute, istate_, jstate_, ilambda_we, jlambda_we, isigma2, isigmav, itau, ilambda_, jlambda_
       real(rk) :: sigmai_we, sigmaj_we, spini_, spinj_, q_we, three_j_ref, three_j_, SO
-      real(rk) :: sigmai_, sigmaj_, omegai_, omegaj_, f_t, ilambda_, jlambda_
+      real(rk) :: sigmai_, sigmaj_, omegai_, omegaj_, f_t
       character(cl) :: printout_
       
       loop_iso: do iso = 1, Nspinorbits
@@ -13361,7 +13294,7 @@ subroutine Compute_rovibron_Hamiltonian_lambda_S_repres_opt(iverbose,jval,ngrid,
                 !$omp end critical
               endif
               
-              exit loop_iso
+              cycle loop_iso
             enddo ! isigmav
           enddo ! isigma2
         enddo ! ipermute
@@ -13502,7 +13435,8 @@ subroutine Compute_rovibron_Hamiltonian_lambda_S_repres_opt(iverbose,jval,ngrid,
                 f_t = f_t * (-1.0_rk)**itau
               endif
               
-              f_t = sqrt((jval_sq - f_l*omegai) * (jval_sq + f_l*omegai + 1.0_rk) / jval_sq) * f_t
+              ! sqrt((J-f_l*Omega)*(J+f_l*Omega+1)) with f_l = +/-1
+              f_t = sqrt(jval_sq - omegai*(omegai + f_l)) * f_t
               hmat_elem = hmat_elem - f_t
               
               ! Debug printing

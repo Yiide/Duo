@@ -1448,26 +1448,37 @@ module functions
     !
     real(rk),intent(in)    :: r             ! geometry (Ang)
     real(rk),intent(in)    :: parameters(:) ! potential parameters
-    real(rk)               :: r0,f,rref,z,t,tinf,y
+    real(rk)               :: r0,f,z,t,tinf,y
     integer(ik)            :: k,N,p,q
     !
     r0 = parameters(1)
     !
-    rref = parameters(2)
+    p = nint(parameters(2))
+    q = nint(parameters(3))
     !
-    p = nint(parameters(3))
-    q = nint(parameters(4))
-    N = size(parameters)-4-2
+    if (r<=r0) then
+      N = parameters(4)
+    else
+      N = parameters(5)
+    endif
+    !
+    if (size(parameters)/=5+1+max(parameters(5),parameters(6))+1) then
+      write(out,"('poten_BOBCoxon: Illegal number of parameters in BOBCoxon, check NS and NL, must be max(NS,NL)+2')")
+      print*,parameters(:)
+      stop 'poten_BOBCoxon: Illegal number of parameters, check NS and NL'
+    endif
     !
     z = (r**p-r0**p)/(r**p+r0**p)
     y = (r**q-r0**q)/(r**q+r0**q)
     !
     t = 0
     do k=0,N
-     t = t + parameters(k+5)*z**k
+     t = t + parameters(k+6)*z**k
     enddo
     !
-    tinf = parameters(N+6)
+    N = size(parameters)
+    !
+    tinf = parameters(N)
     !
     f = (1.0_rk-y)*t+y*tinf
     !
@@ -1484,7 +1495,6 @@ module functions
     !
     ma = parameters(2)/parameters(3)
     mb = parameters(4)/parameters(5)
-!    write(out,*) r, ma, parameters(2), parameters(3), mb, parameters(4), parameters(5)
     !
     q = parameters(6)
     !
