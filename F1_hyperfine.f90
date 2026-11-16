@@ -251,11 +251,11 @@ contains
                             min_eigen_value_hfs)
 
                         if (iverbose>=4) then
-                            write(unit_hyperfine_states, '(I7, 3F22.12, I7, A7, A4, A5, A7, A12, I7, I4, 2A5)') & 
+                            write(unit_hyperfine_states, '(I7, F22.12, I7, A7, A4, A5, A7, A12, I7, I4, 2A5)') &
                                 iroot, &
                                 eigen_value_Ftot(index_levels_Ftot), &
-                                eigen_value_rov_J(maxlocation2)-job%ZPE, & 
-                                eigen_value_Ftot(index_levels_Ftot)-(eigen_value_rov_J(maxlocation2)-job%ZPE), & 
+                                ! eigen_value_rov_J(maxlocation2)-job%ZPE, &
+                                ! eigen_value_Ftot(index_levels_Ftot)-(eigen_value_rov_J(maxlocation2)-job%ZPE), &
                                 int(quanta%Ftot * 2.0_rk + 1.0_rk), &
                                 qnum2a(quanta%Ftot, 7), &
                                 trim(parity_sign(index_represC2v)), & 
@@ -876,12 +876,12 @@ contains
                         min_eigen_value_hfs)
 
                     if (iverbose>=4) then
-                        write(unit_hyperfine_states, '(I7, 3F22.12, I7, A7, A3, A7, A7, A12, I7, I4, 2A5)') &
+                        write(unit_hyperfine_states, '(I7, F22.12, I7, A7, A3, A7, A7, A12, I7, I4, 2A5)') &
                             iroot, &
                             eigen_value_Ftot(index_levels_Ftot), &
-                            eigen_value_rov_J(maxlocation2) - job%ZPE, &
-                            eigen_value_Ftot(index_levels_Ftot) &
-                                - (eigen_value_rov_J(maxlocation2) - job%ZPE), &
+                            ! eigen_value_rov_J(maxlocation2) - job%ZPE, &
+                            ! eigen_value_Ftot(index_levels_Ftot) &
+                            !     - (eigen_value_rov_J(maxlocation2) - job%ZPE), &
                             int(quanta%Ftot * 2.0_rk + 1.0_rk), &
                             qnum2a(quanta%Ftot, 7), &
                             trim(parity_sign(index_represCs)), &
